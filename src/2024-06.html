@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Advent of Code: 2024 day 6</title>
+
+	<link rel="stylesheet" crossorigin="anonymous" integrity="sha256-0kw+JMHF064GBRn+7LOgdCjkkTPHMVaoe7IAuFhYPO0="
+		  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.green.css">
+
+	<script defer crossorigin="anonymous" integrity="sha256-0hPO5JtoudQfIItoc03R3Ymi1+sRsqxHdO/p3Ow2HjY="
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.7/dist/cdn.js"></script>
+	<script>
+		const directions = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+
+		function doMove(grid, yGuard, xGuard, directionIdx, visited, visitedCount) {
+			const HEIGHT = grid.length;
+			const WIDTH = grid[0].length;
+			const direction = directions[directionIdx];
+			const yy = yGuard + direction[0];
+			const xx = xGuard + direction[1];
+
+			if (yy < 0 || yy >= HEIGHT || xx < 0 || xx >= WIDTH) {
+				return null;
+			}
+
+			const c = grid[yy][xx];
+			if (c === '#') {
+				directionIdx = (directionIdx + 1) % 4;
+			} else {
+				yGuard = yy;
+				xGuard = xx;
+				if (!visited[yy][xx]) {
+					++visitedCount;
+					visited[yy][xx] = true;
+				}
+			}
+
+			return [yGuard, xGuard, directionIdx, visitedCount];
+		}
+
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('aoc', () => ({
+				rawData: '',
+				showForm: true,
+				grid: [],
+				HEIGHT: null,
+				WIDTH: null,
+				yGuard: null,
+				xGuard: null,
+				directions: directions,
+				directionIdx: 0,
+				visited: [],
+				visitedCount: 1,
+				startSimulation() {
+					const timeoutId = setInterval(() => {
+						const result = doMove(this.grid, this.yGuard, this.xGuard, this.directionIdx, this.visited, this.visitedCount);
+						if (result === null) {
+							clearTimeout(timeoutId);
+							return;
+						}
+						this.yGuard = result[0];
+						this.xGuard = result[1];
+						this.directionIdx = result[2];
+						this.visitedCount = result[3];
+					}, 10)
+				},
+				processInput() {
+					const trimmedInput = this.rawData.trim();
+					if (!trimmedInput) {
+						return;
+					}
+
+					const tempGrid = [];
+					const lines = trimmedInput.split(/\r\n|\r|\n/);
+					for (const line of lines) {
+						const row = [];
+						for (const char of line) {
+							row.push(char);
+						}
+						tempGrid.push(row);
+					}
+					this.grid = tempGrid;
+
+					const HEIGHT = this.grid.length;
+					const WIDTH = this.grid[0].length;
+
+					findGuard:
+						for (let y = 0; y < HEIGHT; y++) {
+							for (let x = 0; x < WIDTH; x++) {
+								if (this.grid[y][x] === '^') {
+									this.yGuard = y;
+									this.xGuard = x;
+									break findGuard;
+								}
+							}
+						}
+
+					for (let y = 0; y < HEIGHT; y++) {
+						this.visited.push(new Array(WIDTH).fill(false));
+					}
+					this.visited[this.yGuard][this.xGuard] = true;
+
+					this.showForm = false;
+				}
+			}));
+		});
+
+	</script>
+</head>
+
+<body>
+<main class="container-fluid">
+	<section>
+		<div x-data="aoc">
+			<template x-if="showForm">
+				<form @submit.prevent="processInput()">
+					<div>
+						Enter your Advent of Code <a href="https://adventofcode.com/2024/day/6/input"> day 6 input</a>
+						below.
+					</div>
+					<textarea x-model="rawData" rows="10" cols="50"></textarea>
+					<br>
+					<button type="submit">Submit</button>
+				</form>
+			</template>
+			<div x-text="visitedCount" x-show="!showForm"></div>
+			<div style="width: fit-content; background-color: var(--pico-code-background-color);">
+				<template x-for="(row, y) in grid" x-effect="if (!showForm) {startSimulation()}">
+					<div style="font-size: 10px; line-height: normal; white-space: pre; font-family: var(--pico-font-family-monospace, monospace);"
+						 x-text="row.map((char, x) => char === '#' ? 'X' : (visited[y][x] ? 'O' : ' ')).join('')"></div>
+				</template>
+			</div>
+		</div>
+	</section>
+</main>
+</body>
+</html>
